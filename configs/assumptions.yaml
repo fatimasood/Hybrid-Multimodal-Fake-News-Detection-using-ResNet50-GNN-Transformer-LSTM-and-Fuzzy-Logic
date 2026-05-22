@@ -1,0 +1,44 @@
+paper_extraction:
+  title: "A novel fuzzy logic-based hybrid framework for detecting fake news"
+  doi: "10.1007/s10791-025-09882-x"
+  model_name: "Trustify"
+
+critical_inconsistencies:
+  - "Data Availability gives only https://www.kaggle.com/datasets/sudishbasnet/truthseekertwitterdataset2023, while experiments claim Twitter, BuzzFeed, and PolitiFact."
+  - "Table 4 says BuzzFeed has about 2.7k articles and PolitiFact about 11k posts; Table 5 says BuzzFeed has 220 and PolitiFact has 3565."
+  - "Table 4 reports Twitter test split as about 3.4k, while Table 5 uses 1.7k test and 1.7k validation."
+  - "The method says Gaussian Low/Medium/High membership functions; later Eq. 6 defines a linear ramp threshold membership; the ablation section says each input has two membership functions."
+  - "Table 2 says Text Fake + Image Real => Fake, but Scenario 2 says Text Fake + Image Real => Real."
+  - "The paper says ResNet-50 avgpool features are a set of vectors, but avgpool emits one 2048-dimensional vector per image."
+  - "The comparison section mentions BERT for contextual text representation, but the proposed methodology describes Word2Vec/GloVe plus LSTM."
+  - "Hardware is inconsistent: one paragraph states Intel i5-1235U 1.30 GHz, another states RTX 4090, 64 GB RAM, Intel Core i9."
+
+implementation_assumptions:
+  - id: A1
+    decision: "Use Table 2 fuzzy rules as default because it is the explicit rule table."
+    isolation: "configs/trustify_reproduction.yaml:fuzzy.rules"
+  - id: A2
+    decision: "Slice the ResNet-50 avgpool 2048-vector into 16 graph nodes of 128 dimensions."
+    justification: "The paper says avgpool features are sliced into GNN nodes but does not give K or d."
+    isolation: "configs/trustify_reproduction.yaml:models.image.graph_nodes"
+  - id: A3
+    decision: "Use torchvision ResNet50 ImageNet weights."
+    justification: "The paper says pre-trained/fine-tuned ImageNet weights but does not identify the exact checkpoint."
+    isolation: "models/image/resnet_features.py"
+  - id: A4
+    decision: "Use Transformer d_model=128, nhead=8, feedforward=512."
+    justification: "Only three encoder and decoder layers are specified."
+    isolation: "configs/trustify_reproduction.yaml:models.image.transformer"
+  - id: A5
+    decision: "Use LSTM hidden_dim=128, one layer, no dropout."
+    justification: "The paper gives optimizer, batch size, epochs, activation, initial LR, gradient threshold, and LR drop factor only."
+    isolation: "configs/trustify_reproduction.yaml:models.text_lstm"
+  - id: A6
+    decision: "Implement both Gaussian MFs and Eq. 6 threshold MFs; fuzzy reasoning uses Gaussian MFs while MFCE tunes thresholds."
+    justification: "This preserves both incompatible paper statements without replacing fuzzy logic."
+    isolation: "models/fuzzy"
+  - id: A7
+    decision: "Use greedy caption decoding."
+    justification: "The paper describes decoder scoring each vocabulary word but omits beam search/sampling."
+    isolation: "configs/trustify_reproduction.yaml:models.image.transformer.decoding"
+
