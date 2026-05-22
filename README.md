@@ -1,8 +1,8 @@
-# Trustify Strict Reproduction
+# Trustify
 
-This repository is a strict reproduction scaffold for:
+This repository is a reproduction for:
 
-**Bharati, Bharti, and Dehalwar. "A novel fuzzy logic-based hybrid framework for detecting fake news." Discover Computing 29, 58 (2026). DOI: 10.1007/s10791-025-09882-x**
+"A novel fuzzy logic-based hybrid framework for detecting fake news." 
 
 The implementation follows the paper as closely as possible and records every missing or contradictory detail in [configs/assumptions.yaml](configs/assumptions.yaml).
 
