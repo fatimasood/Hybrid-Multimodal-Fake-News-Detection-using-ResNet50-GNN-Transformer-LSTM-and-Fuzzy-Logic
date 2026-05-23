@@ -9,7 +9,7 @@ import pandas as pd
 import torch
 
 from data.datasets import TrustifyMultimodalDataset
-from evaluation.metrics import binary_metrics
+from evaluation.metrics import binary_metrics_with_scores
 from models.text.lstm_classifier import LSTMTextClassifier
 from preprocessing.image import build_image_transform
 from preprocessing.text import build_text_preprocessor
@@ -26,6 +26,7 @@ def main() -> None:
     parser.add_argument("--split", choices=["train", "validation", "test"], default="test")
     parser.add_argument("--checkpoint", default="checkpoints/text_lstm.pt")
     parser.add_argument("--out-dir", default="logs")
+    parser.add_argument("--threshold", type=float, default=0.5)
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -79,9 +80,9 @@ def main() -> None:
             labels.extend(batch["label"].numpy().astype(int).tolist())
 
     y_prob = np.asarray(probabilities)
-    y_pred = (y_prob >= 0.5).astype(int)
+    y_pred = (y_prob >= args.threshold).astype(int)
     y_true = np.asarray(labels)
-    metrics = binary_metrics(y_true, y_pred)
+    metrics = binary_metrics_with_scores(y_true, y_prob, threshold=args.threshold)
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

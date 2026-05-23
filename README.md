@@ -67,3 +67,23 @@ python scripts/run_ablation.py --config configs/trustify_reproduction.yaml
 
 The paper does not provide an official repository, exact vocabulary, pretrained embedding file, LSTM hidden dimension, Transformer attention heads, image-caption labels, caption decoding policy, full fuzzy membership parameters, or exact GA settings. This repository makes those choices explicit in config and keeps them isolated.
 
+## Fakeddit Colab Experiment
+
+Because the paper-linked Kaggle TruthSeeker dataset does not contain image files or captions, use the Fakeddit subset workflow for a complete runnable multimodal experiment:
+
+```bash
+python scripts/adapt_fakeddit.py --input data/raw/fakeddit/multimodal_only_samples/multimodal_train.tsv --out data/processed/fakeddit_prepared.csv --sample-size 10000 --balanced --image-root data/raw/fakeddit/images
+python scripts/download_fakeddit_images.py --csv data/processed/fakeddit_prepared.csv --workers 16 --keep-only-downloaded
+python reproduce.py --config configs/fakeddit_colab.yaml --stage prepare --csv data/processed/fakeddit_prepared.csv
+python reproduce.py --config configs/fakeddit_colab.yaml --stage train_text
+python -m scripts.predict_text --config configs/fakeddit_colab.yaml --split validation
+python -m scripts.predict_text --config configs/fakeddit_colab.yaml --split test
+python reproduce.py --config configs/fakeddit_colab.yaml --stage train_image
+python -m scripts.predict_image --config configs/fakeddit_colab.yaml --split test
+python scripts/combine_predictions.py --text logs/text_test_predictions.csv --image logs/image_test_predictions.csv --out logs/hybrid_test_predictions.csv
+python scripts/predict_fuzzy.py --config configs/fakeddit_colab.yaml --predictions logs/hybrid_test_predictions.csv
+python scripts/generate_report.py --text-predictions logs/text_test_predictions.csv --image-predictions logs/image_test_predictions.csv --hybrid-predictions logs/fuzzy_test_predictions.csv
+```
+
+The Fakeddit adapter uses the observed released-file binary convention `2_way_label=1` as real and `2_way_label=0` as fake. Generated figures and metrics are written to `logs/research_report/`.
+

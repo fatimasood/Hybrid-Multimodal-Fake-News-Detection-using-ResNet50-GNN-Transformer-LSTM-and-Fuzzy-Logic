@@ -65,6 +65,7 @@ def train_text(config_path: str) -> None:
 
     for epoch in range(1, model_cfg["epochs"] + 1):
         model.train()
+        train_losses = []
         for batch in train_loader:
             optimizer.zero_grad(set_to_none=True)
             preds = model(batch["text_ids"].to(device))
@@ -72,8 +73,10 @@ def train_text(config_path: str) -> None:
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), model_cfg["gradient_threshold"])
             optimizer.step()
+            train_losses.append(float(loss.detach().cpu()))
         scheduler.step()
         save_checkpoint(Path(cfg["paths"]["checkpoints_dir"]) / "text_lstm.pt", model, optimizer, epoch)
+        print({"epoch": epoch, "train_bce": sum(train_losses) / max(len(train_losses), 1)})
 
     model.eval()
     val_losses = []
@@ -93,4 +96,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

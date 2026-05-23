@@ -22,8 +22,10 @@ def find_column(frame: pd.DataFrame, candidates: list[str]) -> str:
 
 def normalize_fakeddit_label(frame: pd.DataFrame) -> pd.Series:
     if "2_way_label" in frame.columns:
-        # Fakeddit convention: 0=true, 1=fake. Project convention: 1=real, 0=fake.
-        return 1 - frame["2_way_label"].astype(int)
+        # Fakeddit multimodal TSV convention observed in released files:
+        # 2_way_label=1 corresponds to true/real-style posts and 0 to fake-style posts.
+        # Project convention: 1=real, 0=fake.
+        return frame["2_way_label"].astype(int)
     if "6_way_label" in frame.columns:
         # Fakeddit 6-way: 0=true, all other classes are fake-like categories.
         return (frame["6_way_label"].astype(int) == 0).astype(int)
@@ -51,9 +53,16 @@ def image_path_from_id_or_url(frame: pd.DataFrame, image_root: str) -> pd.Series
     raise ValueError("No supported image field found. Expected image_path, id, or image_url.")
 
 
-def stratified_sample(frame: pd.DataFrame, n: int | None, seed: int) -> pd.DataFrame:
+def stratified_sample(frame: pd.DataFrame, n: int | None, seed: int, balanced: bool = False) -> pd.DataFrame:
     if n is None or n >= len(frame):
         return frame.sample(frac=1.0, random_state=seed).reset_index(drop=True)
+    if balanced:
+        per_class = n // frame["label"].nunique()
+        sampled = []
+        for _, class_frame in frame.groupby("label"):
+            take = min(per_class, len(class_frame))
+            sampled.append(class_frame.sample(n=take, random_state=seed))
+        return pd.concat(sampled).sample(frac=1.0, random_state=seed).reset_index(drop=True)
     _, sample = train_test_split(
         frame,
         test_size=n,
@@ -71,6 +80,7 @@ def main() -> None:
     parser.add_argument("--image-root", default="data/raw/fakeddit/images")
     parser.add_argument("--sample-size", type=int, default=10000)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--balanced", action="store_true", help="Use an equal number of real/fake examples.")
     args = parser.parse_args()
 
     frame = read_table(Path(args.input))
@@ -81,14 +91,16 @@ def main() -> None:
 
     prepared = pd.DataFrame(
         {
+            "source_id": frame["id"].fillna("").astype(str) if "id" in frame.columns else "",
             "text": frame[text_column].fillna("").astype(str),
             "image_path": image_path_from_id_or_url(frame, args.image_root),
+            "image_url": frame["image_url"].fillna("").astype(str) if "image_url" in frame.columns else "",
             "caption": frame[text_column].fillna("").astype(str),
             "label": normalize_fakeddit_label(frame),
         }
     )
     prepared = prepared[prepared["text"].str.len() > 0].dropna(subset=["label"]).reset_index(drop=True)
-    prepared = stratified_sample(prepared, args.sample_size, args.seed)
+    prepared = stratified_sample(prepared, args.sample_size, args.seed, args.balanced)
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

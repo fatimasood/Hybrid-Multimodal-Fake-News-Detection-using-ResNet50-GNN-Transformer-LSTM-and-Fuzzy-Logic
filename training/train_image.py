@@ -60,6 +60,7 @@ def train_image(config_path: str) -> None:
 
     for epoch in range(1, cfg["models"]["text_lstm"]["epochs"] + 1):
         model.train()
+        train_losses = []
         for batch in loader:
             optimizer.zero_grad(set_to_none=True)
             caption = batch["caption_ids"].to(device)
@@ -72,7 +73,9 @@ def train_image(config_path: str) -> None:
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), cfg["models"]["text_lstm"]["gradient_threshold"])
             optimizer.step()
+            train_losses.append(float(loss.detach().cpu()))
         save_checkpoint(Path(cfg["paths"]["checkpoints_dir"]) / "image_gnn_transformer.pt", model, optimizer, epoch)
+        print({"epoch": epoch, "train_joint_loss": sum(train_losses) / max(len(train_losses), 1)})
 
 
 def main() -> None:
@@ -84,4 +87,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
