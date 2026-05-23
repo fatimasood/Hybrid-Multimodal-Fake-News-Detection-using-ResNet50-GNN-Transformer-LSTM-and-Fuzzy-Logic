@@ -75,7 +75,7 @@ def main() -> None:
     labels: list[int] = []
     with torch.no_grad():
         for batch in loader:
-            probs = model(batch["text_ids"].to(device)).detach().cpu().numpy()
+            probs = model(batch["text_ids"].to(device), batch["text_length"].to(device)).detach().cpu().numpy()
             probabilities.extend(probs.tolist())
             labels.extend(batch["label"].numpy().astype(int).tolist())
 

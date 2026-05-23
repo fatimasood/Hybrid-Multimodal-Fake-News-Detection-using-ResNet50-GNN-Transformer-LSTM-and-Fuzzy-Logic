@@ -68,7 +68,7 @@ def train_text(config_path: str) -> None:
         train_losses = []
         for batch in train_loader:
             optimizer.zero_grad(set_to_none=True)
-            preds = model(batch["text_ids"].to(device))
+            preds = model(batch["text_ids"].to(device), batch["text_length"].to(device))
             loss = criterion(preds, batch["label"].to(device))
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), model_cfg["gradient_threshold"])
@@ -82,7 +82,7 @@ def train_text(config_path: str) -> None:
     val_losses = []
     with torch.no_grad():
         for batch in val_loader:
-            preds = model(batch["text_ids"].to(device))
+            preds = model(batch["text_ids"].to(device), batch["text_length"].to(device))
             val_losses.append(float(criterion(preds, batch["label"].to(device)).cpu()))
     print({"validation_bce": sum(val_losses) / max(len(val_losses), 1)})
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 from torch import nn
+from torch.nn.utils.rnn import pack_padded_sequence
 
 
 class LSTMTextClassifier(nn.Module):
@@ -30,10 +31,18 @@ class LSTMTextClassifier(nn.Module):
         self.output = nn.Linear(hidden_dim, 1)
         self.activation = nn.Sigmoid()
 
-    def forward(self, text_ids: torch.Tensor) -> torch.Tensor:
+    def forward(self, text_ids: torch.Tensor, lengths: torch.Tensor | None = None) -> torch.Tensor:
         # text_ids: [batch, sequence_length]
         embedded = self.embedding(text_ids)
-        _, (hidden, _) = self.lstm(embedded)
+        if lengths is not None:
+            packed = pack_padded_sequence(
+                embedded,
+                lengths.detach().cpu(),
+                batch_first=True,
+                enforce_sorted=False,
+            )
+            _, (hidden, _) = self.lstm(packed)
+        else:
+            _, (hidden, _) = self.lstm(embedded)
         logits = self.output(hidden[-1]).squeeze(-1)
         return self.activation(logits)
-

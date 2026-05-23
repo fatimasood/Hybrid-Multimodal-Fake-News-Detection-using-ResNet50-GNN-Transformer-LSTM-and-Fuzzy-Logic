@@ -56,6 +56,7 @@ class TrustifyMultimodalDataset(Dataset):
         caption_tokens = self.text_preprocessor(str(row.get(self.caption_column, "")))
         text_ids = self.vocab.encode(text_tokens, self.max_text_length)
         caption_ids = self.vocab.encode(caption_tokens, self.max_caption_length, add_bos_eos=True)
+        text_length = max(1, min(len(text_tokens), self.max_text_length))
         label = int(row[self.label_column])
 
         raw_image_value = row.get(self.image_column, "")
@@ -69,6 +70,7 @@ class TrustifyMultimodalDataset(Dataset):
 
         return {
             "text_ids": torch.tensor(text_ids, dtype=torch.long),
+            "text_length": torch.tensor(text_length, dtype=torch.long),
             "caption_ids": torch.tensor(caption_ids, dtype=torch.long),
             "image": image,
             "label": torch.tensor(label, dtype=torch.float32),
