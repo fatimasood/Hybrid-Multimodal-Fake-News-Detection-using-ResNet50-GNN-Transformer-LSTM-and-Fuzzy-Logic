@@ -63,6 +63,7 @@ def train_text(config_path: str) -> None:
     train_loader = build_loader(train_ds, model_cfg["batch_size"], cfg["experiment"]["seed"], shuffle=True)
     val_loader = build_loader(val_ds, model_cfg["batch_size"], cfg["experiment"]["seed"], shuffle=False)
 
+    best_val_loss = float("inf")
     for epoch in range(1, model_cfg["epochs"] + 1):
         model.train()
         train_losses = []
@@ -76,7 +77,24 @@ def train_text(config_path: str) -> None:
             train_losses.append(float(loss.detach().cpu()))
         scheduler.step()
         save_checkpoint(Path(cfg["paths"]["checkpoints_dir"]) / "text_lstm.pt", model, optimizer, epoch)
-        print({"epoch": epoch, "train_bce": sum(train_losses) / max(len(train_losses), 1)})
+        model.eval()
+        epoch_val_losses = []
+        with torch.no_grad():
+            for batch in val_loader:
+                preds = model(batch["text_ids"].to(device), batch["text_length"].to(device))
+                epoch_val_losses.append(float(criterion(preds, batch["label"].to(device)).cpu()))
+        val_loss = sum(epoch_val_losses) / max(len(epoch_val_losses), 1)
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            save_checkpoint(Path(cfg["paths"]["checkpoints_dir"]) / "text_lstm_best.pt", model, optimizer, epoch, {"validation_bce": val_loss})
+        print(
+            {
+                "epoch": epoch,
+                "train_bce": sum(train_losses) / max(len(train_losses), 1),
+                "validation_bce": val_loss,
+                "best_validation_bce": best_val_loss,
+            }
+        )
 
     model.eval()
     val_losses = []

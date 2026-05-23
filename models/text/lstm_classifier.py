@@ -28,7 +28,8 @@ class LSTMTextClassifier(nn.Module):
             batch_first=True,
             dropout=dropout if num_layers > 1 else 0.0,
         )
-        self.output = nn.Linear(hidden_dim, 1)
+        self.pool_projection = nn.Linear(embedding_dim, hidden_dim)
+        self.output = nn.Linear(hidden_dim * 2, 1)
         self.activation = nn.Sigmoid()
 
     def forward(self, text_ids: torch.Tensor, lengths: torch.Tensor | None = None) -> torch.Tensor:
@@ -44,5 +45,16 @@ class LSTMTextClassifier(nn.Module):
             _, (hidden, _) = self.lstm(packed)
         else:
             _, (hidden, _) = self.lstm(embedded)
-        logits = self.output(hidden[-1]).squeeze(-1)
+        # Concatenate the final LSTM state with masked mean pooling.
+        # This keeps the LSTM architecture while improving short-title robustness.
+        if lengths is not None:
+            mask = (text_ids != 0).unsqueeze(-1)
+            summed = (embedded * mask).sum(dim=1)
+            denom = mask.sum(dim=1).clamp_min(1)
+            pooled = summed / denom
+        else:
+            pooled = embedded.mean(dim=1)
+        pooled = torch.tanh(self.pool_projection(pooled))
+        features = torch.cat([hidden[-1], pooled], dim=1)
+        logits = self.output(features).squeeze(-1)
         return self.activation(logits)

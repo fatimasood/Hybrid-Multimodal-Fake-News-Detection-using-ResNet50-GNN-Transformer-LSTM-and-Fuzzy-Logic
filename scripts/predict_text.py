@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import numpy as np
 import pandas as pd
@@ -24,7 +27,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate the text-only LSTM branch.")
     parser.add_argument("--config", default="configs/trustify_reproduction.yaml")
     parser.add_argument("--split", choices=["train", "validation", "test"], default="test")
-    parser.add_argument("--checkpoint", default="checkpoints/text_lstm.pt")
+    parser.add_argument("--checkpoint", default="checkpoints/text_lstm_best.pt")
     parser.add_argument("--out-dir", default="logs")
     parser.add_argument("--threshold", type=float, default=0.5)
     args = parser.parse_args()

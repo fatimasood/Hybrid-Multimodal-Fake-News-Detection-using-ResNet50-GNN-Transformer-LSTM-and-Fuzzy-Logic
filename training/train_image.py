@@ -56,6 +56,9 @@ def train_image(config_path: str) -> None:
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg["models"]["text_lstm"]["initial_learning_rate"])
     criterion_cls = nn.BCELoss()
     criterion_cap = nn.CrossEntropyLoss(ignore_index=0)
+    loss_cfg = image_cfg.get("loss", {})
+    classification_weight = float(loss_cfg.get("classification_weight", 1.0))
+    caption_weight = float(loss_cfg.get("caption_weight", 0.1))
     loader = build_loader(train_ds, cfg["models"]["text_lstm"]["batch_size"], cfg["experiment"]["seed"], shuffle=True)
 
     for epoch in range(1, cfg["models"]["text_lstm"]["epochs"] + 1):
@@ -69,7 +72,7 @@ def train_image(config_path: str) -> None:
             cap_logits = outputs["caption_logits"].reshape(-1, len(vocab))
             cap_target = caption[:, 1:].reshape(-1)
             caption_loss = criterion_cap(cap_logits, cap_target)
-            loss = cls_loss + caption_loss
+            loss = classification_weight * cls_loss + caption_weight * caption_loss
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), cfg["models"]["text_lstm"]["gradient_threshold"])
             optimizer.step()

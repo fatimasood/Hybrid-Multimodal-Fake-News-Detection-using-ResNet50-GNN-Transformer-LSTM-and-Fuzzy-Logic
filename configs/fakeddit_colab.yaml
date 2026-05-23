@@ -4,7 +4,7 @@ experiment:
   runs: 1
   framework: "PyTorch + Colab GPU"
   device: cuda
-  deterministic: true
+  deterministic: false
 
 paths:
   raw_data_dir: data/raw
@@ -32,12 +32,12 @@ dataset:
 preprocessing:
   text:
     lowercase: true
-    remove_stopwords: true
+    remove_stopwords: false
     remove_punctuation: true
-    stemming: true
-    lemmatization: true
+    stemming: false
+    lemmatization: false
     tokenizer: whitespace_after_cleaning
-    max_sequence_length: 128
+    max_sequence_length: 64
     padding: post
     truncation: post
     embedding:
@@ -53,9 +53,9 @@ models:
   text_lstm:
     optimizer: Adam
     batch_size: 20
-    epochs: 5
+    epochs: 20
     activation: sigmoid
-    initial_learning_rate: 0.005
+    initial_learning_rate: 0.001
     gradient_threshold: 1.0
     learn_rate_drop_factor: 0.2
     hidden_dim: 128
@@ -84,6 +84,9 @@ models:
       dropout: 0.1
       max_caption_length: 24
       decoding: greedy
+    loss:
+      classification_weight: 1.0
+      caption_weight: 0.1
 
 fuzzy:
   enabled_inputs: [text_confidence, image_confidence, caption_text_similarity]
